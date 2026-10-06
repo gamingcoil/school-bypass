@@ -1,7 +1,6 @@
 import os
 import requests
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 BASE_URL = "https://school-arrival.vercel.app"
 
@@ -17,10 +16,7 @@ def main():
     session = requests.Session()
 
     print("Starting check-in...")
-    print(
-        "Time:",
-        datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%Y-%m-%d %H:%M:%S")
-    )
+    print("Time:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     # ----------------------------------------
     # Get CSRF token
