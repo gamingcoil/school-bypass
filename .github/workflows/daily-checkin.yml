@@ -2,7 +2,7 @@ name: Daily Check-in
 
 on:
   schedule:
-    - cron: "45 7 * * *"
+    - cron: "45 7 * * 0-4"
       timezone: "Asia/Jerusalem"
 
   workflow_dispatch:
