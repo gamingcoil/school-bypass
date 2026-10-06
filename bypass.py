@@ -1,92 +1,112 @@
 import os
 import requests
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 BASE_URL = "https://school-arrival.vercel.app"
 
 USERNAME = os.environ["CTF_USERNAME"]
 PASSWORD = os.environ["CTF_PASSWORD"]
 
-# The location used for the CTF
 LATITUDE = 32.078100552583216
 LONGITUDE = 34.87379928650194
 ACCURACY = 124
 
 
-session = requests.Session()
+def main():
+    session = requests.Session()
 
-# --------------------------------------------------
-# 1. Get CSRF token
-# --------------------------------------------------
+    print("Starting check-in...")
+    print(
+        "Time:",
+        datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%Y-%m-%d %H:%M:%S")
+    )
 
-response = session.get(f"{BASE_URL}/api/auth/csrf")
-response.raise_for_status()
+    # ----------------------------------------
+    # Get CSRF token
+    # ----------------------------------------
 
-csrf_token = response.json()["csrfToken"]
+    response = session.get(
+        f"{BASE_URL}/api/auth/csrf",
+        timeout=30
+    )
 
-print("Got CSRF token")
+    response.raise_for_status()
 
+    csrf_token = response.json()["csrfToken"]
 
-# --------------------------------------------------
-# 2. Login using NextAuth Credentials
-# --------------------------------------------------
-
-login_data = {
-    "identifier": USERNAME,
-    "password": PASSWORD,
-    "redirect": "false",
-    "csrfToken": csrf_token,
-    "callbackUrl": f"{BASE_URL}/login",
-    "json": "true"
-}
-
-response = session.post(
-    f"{BASE_URL}/api/auth/callback/credentials",
-    data=login_data,
-    allow_redirects=False
-)
-
-print("Login status:", response.status_code)
-
-if response.status_code not in (200, 302):
-    print(response.text)
-    raise RuntimeError("Login failed")
+    print("CSRF token received")
 
 
-# --------------------------------------------------
-# 3. Verify that we're authenticated
-# --------------------------------------------------
+    # ----------------------------------------
+    # Login
+    # ----------------------------------------
 
-response = session.get(f"{BASE_URL}/api/auth/session")
-response.raise_for_status()
+    login_data = {
+        "identifier": USERNAME,
+        "password": PASSWORD,
+        "redirect": "false",
+        "csrfToken": csrf_token,
+        "callbackUrl": f"{BASE_URL}/login",
+        "json": "true"
+    }
 
-session_data = response.json()
+    response = session.post(
+        f"{BASE_URL}/api/auth/callback/credentials",
+        data=login_data,
+        allow_redirects=False,
+        timeout=30
+    )
 
-print("Session:", session_data)
+    print("Login status:", response.status_code)
 
-if not session_data:
-    raise RuntimeError("No authenticated session")
+    if response.status_code not in (200, 302):
+        print(response.text)
+        raise RuntimeError("Login failed")
 
 
-# --------------------------------------------------
-# 4. Perform check-in
-# --------------------------------------------------
+    # ----------------------------------------
+    # Verify session
+    # ----------------------------------------
 
-checkin_data = {
-    "latitude": LATITUDE,
-    "longitude": LONGITUDE,
-    "accuracy": ACCURACY
-}
+    response = session.get(
+        f"{BASE_URL}/api/auth/session",
+        timeout=30
+    )
 
-response = session.post(
-    f"{BASE_URL}/api/check-in",
-    json=checkin_data
-)
+    response.raise_for_status()
 
-print("Check-in status:", response.status_code)
-print("Response:", response.text)
+    session_data = response.json()
 
-if response.ok:
-    print("Check-in successful!")
-else:
-    print("Check-in failed")
+    if not session_data:
+        raise RuntimeError("Authentication session was not created")
+
+    print("Authenticated successfully")
+
+
+    # ----------------------------------------
+    # Check-in
+    # ----------------------------------------
+
+    checkin_data = {
+        "latitude": LATITUDE,
+        "longitude": LONGITUDE,
+        "accuracy": ACCURACY
+    }
+
+    response = session.post(
+        f"{BASE_URL}/api/check-in",
+        json=checkin_data,
+        timeout=30
+    )
+
+    print("Check-in status:", response.status_code)
+    print("Response:", response.text)
+
+    response.raise_for_status()
+
+    print("Check-in completed successfully")
+
+
+if __name__ == "__main__":
+    main()
